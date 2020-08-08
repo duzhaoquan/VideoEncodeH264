@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		6070F86124D5059A0049A0DE /* TakephotoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6070F86024D5059A0049A0DE /* TakephotoViewController.swift */; };
 		6070F86324D506E00049A0DE /* VideoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6070F86224D506E00049A0DE /* VideoViewController.swift */; };
+		6094EE0B24DB987F0018224C /* DQVideoEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6094EE0A24DB987F0018224C /* DQVideoEncoder.swift */; };
 		60F2154A24D1133F00ADE28F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F2154924D1133F00ADE28F /* AppDelegate.swift */; };
 		60F2154C24D1133F00ADE28F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F2154B24D1133F00ADE28F /* SceneDelegate.swift */; };
 		60F2154E24D1133F00ADE28F /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F2154D24D1133F00ADE28F /* ViewController.swift */; };
@@ -20,6 +21,7 @@
 /* Begin PBXFileReference section */
 		6070F86024D5059A0049A0DE /* TakephotoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakephotoViewController.swift; sourceTree = "<group>"; };
 		6070F86224D506E00049A0DE /* VideoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoViewController.swift; sourceTree = "<group>"; };
+		6094EE0A24DB987F0018224C /* DQVideoEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DQVideoEncoder.swift; sourceTree = "<group>"; };
 		60F2154624D1133F00ADE28F /* VideoH264.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VideoH264.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		60F2154924D1133F00ADE28F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		60F2154B24D1133F00ADE28F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -65,6 +67,7 @@
 				60F2154D24D1133F00ADE28F /* ViewController.swift */,
 				6070F86024D5059A0049A0DE /* TakephotoViewController.swift */,
 				6070F86224D506E00049A0DE /* VideoViewController.swift */,
+				6094EE0A24DB987F0018224C /* DQVideoEncoder.swift */,
 				60F2154F24D1133F00ADE28F /* Main.storyboard */,
 				60F2155224D1134100ADE28F /* Assets.xcassets */,
 				60F2155424D1134100ADE28F /* LaunchScreen.storyboard */,
@@ -145,6 +148,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				60F2154E24D1133F00ADE28F /* ViewController.swift in Sources */,
+				6094EE0B24DB987F0018224C /* DQVideoEncoder.swift in Sources */,
 				60F2154A24D1133F00ADE28F /* AppDelegate.swift in Sources */,
 				6070F86124D5059A0049A0DE /* TakephotoViewController.swift in Sources */,
 				6070F86324D506E00049A0DE /* VideoViewController.swift in Sources */,

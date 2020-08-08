@@ -31,6 +31,10 @@ class VideoViewController: UIViewController {
     
     var encodeCallBack:VTCompressionOutputCallback?
     
+    var encoder : DQVideoEncoder!
+    
+    var fileHandle : FileHandle?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         self.title = "拍照"
@@ -121,7 +125,22 @@ class VideoViewController: UIViewController {
         //视图重力
         previewLayer.videoGravity = .resizeAspect
         session.startRunning()
+        
+        
+        encoder = DQVideoEncoder(width: 480, height: 640)
+        encoder.videoEncodeCallback {[weak self] (data) in
+            self?.writeTofile(data: data)
+        }
+        encoder.videoEncodeCallbackSPSAndPPS {[weak self] (sps, pps) in
+            self?.writeTofile(data: sps)
+            self?.writeTofile(data: pps)
+        }
     
+    }
+    
+    func writeTofile(data: Data){
+        try? self.fileHandle?.seekToEnd()
+        self.fileHandle?.write(data)
     }
     @objc func recordAction(btn:UIButton){
         btn.isSelected = !btn.isSelected
@@ -144,15 +163,18 @@ class VideoViewController: UIViewController {
                 let connection: AVCaptureConnection = output.connection(with: .video)!
                 connection.videoOrientation = .portrait
                 
-                //生成的文件地址
-                guard let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first else { return  }
-                let filePath =  "\(path)/video.h264"
-                
-                try? FileManager.default.removeItem(atPath: filePath)
-                if FileManager.default.createFile(atPath: filePath, contents: nil, attributes: nil){
-                    print("创建264文件成功")
-                }else{
-                    print("创建264文件失败")
+                if fileHandle == nil{
+                    //生成的文件地址
+                    guard let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first else { return  }
+                    let filePath =  "\(path)/video.h264"
+                    
+                    try? FileManager.default.removeItem(atPath: filePath)
+                    if FileManager.default.createFile(atPath: filePath, contents: nil, attributes: nil){
+                        print("创建264文件成功")
+                    }else{
+                        print("创建264文件失败")
+                    }
+                    fileHandle = FileHandle(forWritingAtPath: path)
                 }
                 
                 
@@ -164,52 +186,6 @@ class VideoViewController: UIViewController {
         }
         
     }
-    
-    func initVideoToolBox() {
-         
-        //创建VTCompressionSession
-        var bself = self
-        let state = VTCompressionSessionCreate(allocator: nil, width: 480, height: 640, codecType: kCMVideoCodecType_H264, encoderSpecification: nil, imageBufferAttributes: nil, compressedDataAllocator: nil, outputCallback: encodeCallBack, refcon: &bself, compressionSessionOut: &self.encodeSession)
-        
-        if state != 0{
-            print("creat VTCompressionSession failed")
-        }
-            
-        //设置实时编码输出
-        VTSessionSetProperty(encodeSession, key: kVTCompressionPropertyKey_RealTime, value: kCFBooleanTrue)
-        //设置编码方式
-        VTSessionSetProperty(encodeSession, key: kVTCompressionPropertyKey_ProfileLevel, value: kVTProfileLevel_H264_Baseline_AutoLevel)
-        //设置是否产生B帧(因为B帧在解码时并不是必要的,是可以抛弃B帧的)
-        VTSessionSetProperty(encodeSession, key: kVTCompressionPropertyKey_AllowFrameReordering, value: kCFBooleanFalse)
-        //设置关键帧间隔
-        var frameInterval = 10
-        let number = CFNumberCreate(kCFAllocatorDefault, CFNumberType.intType, &frameInterval)
-        VTSessionSetProperty(encodeSession, key: kVTCompressionPropertyKey_MaxKeyFrameInterval, value: number)
-        //设置期望帧率，不是实际帧率
-        var fps = 10
-        let fpscf = CFNumberCreate(kCFAllocatorDefault, CFNumberType.intType, &fps)
-        VTSessionSetProperty(encodeSession, key: kVTCompressionPropertyKey_ExpectedFrameRate, value: fpscf)
-        
-        //设置码率平均值，单位是bps。码率大了话就会非常清晰，但同时文件也会比较大。码率小的话，图像有时会模糊，但也勉强能看
-        //码率计算公式参考笔记
-        var bitrate = 480 * 640 * 3 * 4
-        let bitrateAverage = CFNumberCreate(kCFAllocatorDefault, CFNumberType.intType, &bitrate)
-        VTSessionSetProperty(encodeSession, key: kVTCompressionPropertyKey_AverageBitRate, value: bitrateAverage)
-        
-        //码率限制
-        var bitRates :[Int] = [bitrate,1]
-        
-//        CFArrayCreate(kCFAllocatorDefault, bitRates, CFIndex(bitPattern: 2), UnsafePointer<CFArrayCallBacks>!)
-//        VTSessionSetProperty(encodeSession, key: kVTCompressionPropertyKey_DataRateLimits, value: [bitrateAverage])
-        
-        encodeCallBack = {(outputCallbackRefCon, sourceFrameRefCon, status, flag, sampleBuffer) in
-        
-        }
-    }
-    
-
-    
-    
     
     //获取相机设备
     func getCamera(postion: AVCaptureDevice.Position) -> AVCaptureDevice? {
@@ -405,7 +381,7 @@ extension VideoViewController : AVCaptureVideoDataOutputSampleBufferDelegate {
     //采集结果
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         
-        //guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return  }
+        encoder.encodeVideo(sampleBuffer: sampleBuffer)
 
     }
     
