@@ -47,13 +47,14 @@ class DQVideoEncoder: NSObject {
     }
     //初始化编码器
     func initVideoToolBox() {
-        
+        print(self)
         //创建VTCompressionSession
-        var bself = self
-        let state = VTCompressionSessionCreate(allocator: nil, width: width, height: height, codecType: kCMVideoCodecType_H264, encoderSpecification: nil, imageBufferAttributes: nil, compressedDataAllocator: nil, outputCallback:encodeCallBack , refcon: &bself, compressionSessionOut: &self.encodeSession)
+//        var bself = self
+        let state = VTCompressionSessionCreate(allocator: nil, width: width, height: height, codecType: kCMVideoCodecType_H264, encoderSpecification: nil, imageBufferAttributes: nil, compressedDataAllocator: nil, outputCallback:encodeCallBack , refcon: unsafeBitCast(self, to: UnsafeMutablePointer<Void>.self), compressionSessionOut: &self.encodeSession)
         
         if state != 0{
             print("creat VTCompressionSession failed")
+            return
         }
         
         //设置实时编码输出
@@ -98,105 +99,106 @@ class DQVideoEncoder: NSObject {
     private func setCallBack()  {
         //编码完成回调
         encodeCallBack = {(outputCallbackRefCon, sourceFrameRefCon, status, flag, sampleBuffer)  in
-            let encodepointer = outputCallbackRefCon?.bindMemory(to: DQVideoEncoder.self, capacity: 1)
+            //outputCallbackRefCon?.bindMemory(to: DQVideoEncoder.self, capacity: 1)
+//            let encodepointer = outputCallbackRefCon?.assumingMemoryBound(to: DQVideoEncoder.self)
+//            let encodepointer1 = outputCallbackRefCon?.bindMemory(to: DQVideoEncoder.self, capacity: 1)
+//            let encoder1 = encodepointer1?.pointee
+            let encoder :DQVideoEncoder = unsafeBitCast(outputCallbackRefCon, to: DQVideoEncoder.self)
+            
             guard sampleBuffer != nil else {
                 return
             }
-            if let encoder = encodepointer?.pointee {
-                encoder.callBackQueue.async {
-                    /// 0. 原始字节数据 8字节
-                    let buffer : [UInt8] = [0,0,0,1]
-                    /// 1. [UInt8] -> UnsafeBufferPointer<UInt8>
-                    let unsafeBufferPointer = buffer.withUnsafeBufferPointer {$0}
-                    /// 2.. UnsafeBufferPointer<UInt8> -> UnsafePointer<UInt8>
-                    let  unsafePointer = unsafeBufferPointer.baseAddress
-                    guard let startCode = unsafePointer else {return}
+            
+            
+            /// 0. 原始字节数据 8字节
+            let buffer : [UInt8] = [0x00,0x00,0x00,0x01]
+            /// 1. [UInt8] -> UnsafeBufferPointer<UInt8>
+            let unsafeBufferPointer = buffer.withUnsafeBufferPointer {$0}
+            /// 2.. UnsafeBufferPointer<UInt8> -> UnsafePointer<UInt8>
+            let  unsafePointer = unsafeBufferPointer.baseAddress
+            guard let startCode = unsafePointer else {return}
+            
+            let attachArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer!, createIfNecessary: false)
+            
+            
+            var strkey = unsafeBitCast(kCMSampleAttachmentKey_NotSync, to: UnsafeRawPointer.self)
+            let cfDic = unsafeBitCast(CFArrayGetValueAtIndex(attachArray, 0), to: CFDictionary.self)
+            let keyFrame = !CFDictionaryContainsKey(cfDic, strkey);//没有这个键就意味着同步,就是关键帧
+            
+            //  获取sps pps
+            if keyFrame && !encoder.hasSpsPps{
+                if let description = CMSampleBufferGetFormatDescription(sampleBuffer!){
+                    var spsSize: Int = 0, spsCount :Int = 0,spsHeaderLength:Int32 = 0
+                    var ppsSize: Int = 0, ppsCount: Int = 0,ppsHeaderLength:Int32 = 0
+                    //var spsData:UInt8 = 0, ppsData:UInt8 = 0
                     
-                    let attachArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer!, createIfNecessary: false)
-
-                    var strkey = kCMSampleAttachmentKey_NotSync
-                    let dic = CFArrayGetValueAtIndex(attachArray, 0).bindMemory(to: CFDictionary.self, capacity: 1).pointee
-                    let keyFrame = !CFDictionaryContainsKey(dic, &strkey);//没有这个键就意味着同步,就是关键帧
-
-                    //  获取sps pps
-                    if keyFrame && !encoder.hasSpsPps{
-                        if let description = CMSampleBufferGetFormatDescription(sampleBuffer!){
-                            var spsSize: Int = 0, spsCount :Int = 0,spsHeaderLength:Int32 = 0
-                            var ppsSize: Int = 0, ppsCount: Int = 0,ppsHeaderLength:Int32 = 0
-                            //var spsData:UInt8 = 0, ppsData:UInt8 = 0
-                            
-                            var spsDataPointer : UnsafePointer<UInt8>? = UnsafePointer(UnsafeMutablePointer<UInt8>.allocate(capacity: 0))
-                            var ppsDataPointer : UnsafePointer<UInt8>? = UnsafePointer<UInt8>(bitPattern: 0)
-                            let spsstatus = CMVideoFormatDescriptionGetH264ParameterSetAtIndex(description, parameterSetIndex: 0, parameterSetPointerOut: &spsDataPointer, parameterSetSizeOut: &spsSize, parameterSetCountOut: &spsCount, nalUnitHeaderLengthOut: &spsHeaderLength)
-                            if spsstatus != 0{
-                                print("sps失败")
-                            }
-                            
-                            let ppsStatus = CMVideoFormatDescriptionGetH264ParameterSetAtIndex(description, parameterSetIndex: 1, parameterSetPointerOut: &ppsDataPointer, parameterSetSizeOut: &ppsSize, parameterSetCountOut: &ppsCount, nalUnitHeaderLengthOut: &ppsHeaderLength)
-                            if ppsStatus != 0 {
-                                print("pps失败")
-                            }
-                            
-                            
-                            if let spsData = spsDataPointer,let ppsData = ppsDataPointer{
-                                var spsDataValue = Data(capacity: 4 + spsSize)
-                                spsDataValue.append(startCode, count: 4)
-                                spsDataValue.append(spsData, count: spsSize)
-                                
-                                var ppsDataValue = Data(capacity: 4 + ppsSize)
-                                ppsDataValue.append(startCode, count: 4)
-                                ppsDataValue.append(ppsData, count: ppsSize)
-                                encoder.callBackQueue.async {
-                                    encoder.videoEncodeCallbackSPSAndPPS!(spsDataValue, ppsDataValue)
-                                }
-                                
-                               
-                            }
-                        }
+                    var spsDataPointer : UnsafePointer<UInt8>? = UnsafePointer(UnsafeMutablePointer<UInt8>.allocate(capacity: 0))
+                    var ppsDataPointer : UnsafePointer<UInt8>? = UnsafePointer<UInt8>(bitPattern: 0)
+                    let spsstatus = CMVideoFormatDescriptionGetH264ParameterSetAtIndex(description, parameterSetIndex: 0, parameterSetPointerOut: &spsDataPointer, parameterSetSizeOut: &spsSize, parameterSetCountOut: &spsCount, nalUnitHeaderLengthOut: &spsHeaderLength)
+                    if spsstatus != 0{
+                        print("sps失败")
                     }
                     
-                    let dataBuffer = CMSampleBufferGetDataBuffer(sampleBuffer!)
-                    var arr = [Int8]()
-                    let pointer = arr.withUnsafeMutableBufferPointer({$0})
-                    var dataPointer: UnsafeMutablePointer<Int8>?  = pointer.baseAddress
-                    var totalLength :Int = 0
-                    let blockState = CMBlockBufferGetDataPointer(dataBuffer!, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: &totalLength, dataPointerOut: &dataPointer)
-                    if blockState != 0{
-                        print("获取data失败\(blockState)")
+                    let ppsStatus = CMVideoFormatDescriptionGetH264ParameterSetAtIndex(description, parameterSetIndex: 1, parameterSetPointerOut: &ppsDataPointer, parameterSetSizeOut: &ppsSize, parameterSetCountOut: &ppsCount, nalUnitHeaderLengthOut: &ppsHeaderLength)
+                    if ppsStatus != 0 {
+                        print("pps失败")
                     }
                     
-                    //NALU
-                    var offset :UInt32 = 0
-                    //返回的nalu数据前四个字节不是0001的startcode(不是系统端的0001)，而是大端模式的帧长度length
-                    let lengthInfoSize = 4
-                    //循环写入nalu数据
-                    while offset < totalLength - lengthInfoSize {
-                        //获取nalu 数据长度
-                        var naluDataLength:UInt32 = 0
-                        memcpy(&naluDataLength, dataPointer! + UnsafeMutablePointer<Int8>.Stride(offset), lengthInfoSize)
-                        //大端转系统端
-                        naluDataLength = CFSwapInt32BigToHost(naluDataLength)
-                        //获取到编码好的视频数据
-                        var data = Data(capacity: Int(naluDataLength) + lengthInfoSize)
-                        data.append(startCode, count: 4)
-                        //转化pointer；UnsafeMutablePointer<Int8> -> UnsafePointer<UInt8>
-                        let i8:UInt8 = UInt8(dataPointer?.pointee ?? 0)
-                        let bufferPoint = [i8].withUnsafeBufferPointer{$0}
-                        let naluUnsafePoint = bufferPoint.baseAddress!
-                        data.append(naluUnsafePoint + UnsafePointer<UInt8>.Stride(offset) , count: Int(naluDataLength))
+                    
+                    if let spsData = spsDataPointer,let ppsData = ppsDataPointer{
+                        var spsDataValue = Data(capacity: 4 + spsSize)
+                        spsDataValue.append(buffer, count: 4)
+                        spsDataValue.append(spsData, count: spsSize)
                         
+                        var ppsDataValue = Data(capacity: 4 + ppsSize)
+                        ppsDataValue.append(startCode, count: 4)
+                        ppsDataValue.append(ppsData, count: ppsSize)
                         encoder.callBackQueue.async {
-                            encoder.videoEncodeCallback!(data)
+                            encoder.videoEncodeCallbackSPSAndPPS!(spsDataValue, ppsDataValue)
                         }
                         
                         
-                        offset += naluDataLength
-                        
                     }
-                    
-                    
                 }
             }
+            
+            let dataBuffer = CMSampleBufferGetDataBuffer(sampleBuffer!)
+//            var arr = [Int8]()
+//            let pointer = arr.withUnsafeMutableBufferPointer({$0})
+            var dataPointer: UnsafeMutablePointer<Int8>?  = nil
+            var totalLength :Int = 0
+            let blockState = CMBlockBufferGetDataPointer(dataBuffer!, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: &totalLength, dataPointerOut: &dataPointer)
+            if blockState != 0{
+                print("获取data失败\(blockState)")
+            }
+            
+            //NALU
+            var offset :UInt32 = 0
+            //返回的nalu数据前四个字节不是0001的startcode(不是系统端的0001)，而是大端模式的帧长度length
+            let lengthInfoSize = 4
+            //循环写入nalu数据
+            while offset < totalLength - lengthInfoSize {
+                //获取nalu 数据长度
+                var naluDataLength:UInt32 = 0
+                memcpy(&naluDataLength, dataPointer! + UnsafeMutablePointer<Int8>.Stride(offset), lengthInfoSize)
+                //大端转系统端
+                naluDataLength = CFSwapInt32BigToHost(naluDataLength)
+                //获取到编码好的视频数据
+                var data = Data(capacity: Int(naluDataLength) + lengthInfoSize)
+                data.append(buffer, count: 4)
+                //转化pointer；UnsafeMutablePointer<Int8> -> UnsafePointer<UInt8>
+                let naluUnsafePoint = unsafeBitCast(dataPointer, to: UnsafePointer<UInt8>.self)
+
+                data.append(naluUnsafePoint + UnsafePointer<UInt8>.Stride(offset) , count: Int(naluDataLength))
+                
+                encoder.callBackQueue.async {
+                    encoder.videoEncodeCallback!(data)
+                }
+                offset += (naluDataLength + UInt32(lengthInfoSize))
+                
+            }
+            
+            
         }
     }
     

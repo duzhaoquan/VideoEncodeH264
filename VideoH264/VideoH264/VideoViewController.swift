@@ -22,8 +22,8 @@ class VideoViewController: UIViewController {
     lazy var previewLayer  = AVCaptureVideoPreviewLayer(session: self.session)
     lazy var recordOutput = AVCaptureMovieFileOutput()
     var imageView : UIImageView!
-    var dataOutPut: AVCaptureMetadataOutput!
-    
+//    var dataOutPut: AVCaptureMetadataOutput!
+    let output = AVCaptureVideoDataOutput()
     var focusBox:UIView!
     var exposureBox : UIView!
     
@@ -151,7 +151,7 @@ class VideoViewController: UIViewController {
                 if !session.isRunning{
                     session.startRunning()
                 }
-                let output = AVCaptureVideoDataOutput()
+                
                 output.setSampleBufferDelegate(self, queue: queue)
                 if session.canAddOutput(output){
                     session.addOutput(output)
@@ -179,6 +179,7 @@ class VideoViewController: UIViewController {
                 
                 
             }else{
+                session.removeOutput(output)
                 btn.setTitle("start record", for: .normal)
             }
         }else{
