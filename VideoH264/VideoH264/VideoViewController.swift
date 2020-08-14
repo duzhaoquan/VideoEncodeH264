@@ -32,6 +32,8 @@ class VideoViewController: UIViewController {
     var encodeCallBack:VTCompressionOutputCallback?
     
     var encoder : DQVideoEncoder!
+    var decoder:DQVideoDecode!
+    
     
     var fileHandle : FileHandle?
     
@@ -128,12 +130,18 @@ class VideoViewController: UIViewController {
         
         
         encoder = DQVideoEncoder(width: 480, height: 640)
+        decoder = DQVideoDecode(width: 480, height: 640)
+        
         encoder.videoEncodeCallback {[weak self] (data) in
-            self?.writeTofile(data: data)
+//            self?.writeTofile(data: data)
+            self?.decoder.decode(data: data)
         }
         encoder.videoEncodeCallbackSPSAndPPS {[weak self] (sps, pps) in
-            self?.writeTofile(data: sps)
-            self?.writeTofile(data: pps)
+//            self?.writeTofile(data: sps)
+//            self?.writeTofile(data: pps)
+            
+            self?.decoder.decode(data: sps)
+            self?.decoder.decode(data: pps)            
         }
     
     }
@@ -174,7 +182,7 @@ class VideoViewController: UIViewController {
                     }else{
                         print("创建264文件失败")
                     }
-                    fileHandle = FileHandle(forWritingAtPath: path)
+                    fileHandle = FileHandle(forWritingAtPath: filePath)
                 }
                 
                 

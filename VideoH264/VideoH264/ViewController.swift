@@ -35,7 +35,6 @@ class ViewController: UIViewController {
         recodButton.addTarget(self, action: #selector(recordAction(btn:)), for: .touchUpInside)
         view.addSubview(recodButton)
         
-       
     }
     
     @objc func recordAction(btn:UIButton){

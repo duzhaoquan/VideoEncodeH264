@@ -50,7 +50,7 @@ class DQVideoEncoder: NSObject {
         print(self)
         //创建VTCompressionSession
 //        var bself = self
-        let state = VTCompressionSessionCreate(allocator: nil, width: width, height: height, codecType: kCMVideoCodecType_H264, encoderSpecification: nil, imageBufferAttributes: nil, compressedDataAllocator: nil, outputCallback:encodeCallBack , refcon: unsafeBitCast(self, to: UnsafeMutablePointer<Void>.self), compressionSessionOut: &self.encodeSession)
+        let state = VTCompressionSessionCreate(allocator: kCFAllocatorDefault, width: width, height: height, codecType: kCMVideoCodecType_H264, encoderSpecification: nil, imageBufferAttributes: nil, compressedDataAllocator: nil, outputCallback:encodeCallBack , refcon: unsafeBitCast(self, to: UnsafeMutableRawPointer.self), compressionSessionOut: &self.encodeSession)
         
         if state != 0{
             print("creat VTCompressionSession failed")
@@ -85,6 +85,9 @@ class DQVideoEncoder: NSObject {
     
     //开始编码
     func encodeVideo(sampleBuffer:CMSampleBuffer){
+        if self.encodeSession == nil {
+            initVideoToolBox()
+        }
         encodeQueue.async {
             let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
             let time = CMTime(value: self.frameID, timescale: 1000)
@@ -215,7 +218,3 @@ class DQVideoEncoder: NSObject {
     
 }
 
-//UnsafeMutableRawPointer?, UnsafeMutableRawPointer?, OSStatus, VTEncodeInfoFlags, CMSampleBuffer?
-func staticCallBack(outputCallbackRefCon:UnsafeMutableRawPointer?, sourceFrameRefCon:UnsafeMutableRawPointer?, status:OSStatus, flag:VTEncodeInfoFlags, sampleBuffer:CMSampleBuffer?) {
-    
-}
