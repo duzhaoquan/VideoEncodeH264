@@ -192,7 +192,7 @@ class DQVideoEncoder: NSObject {
                 //转化pointer；UnsafeMutablePointer<Int8> -> UnsafePointer<UInt8>
                 let naluUnsafePoint = unsafeBitCast(dataPointer, to: UnsafePointer<UInt8>.self)
 
-                data.append(naluUnsafePoint + UnsafePointer<UInt8>.Stride(offset) , count: Int(naluDataLength))
+                data.append(naluUnsafePoint + UnsafePointer<UInt8>.Stride(offset + UInt32(lengthInfoSize)) , count: Int(naluDataLength))
                 
                 encoder.callBackQueue.async {
                     encoder.videoEncodeCallback!(data)

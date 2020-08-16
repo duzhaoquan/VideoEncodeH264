@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6017CD5B24E7B72C003C4E30 /* CCVideoEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 6017CD5824E7B72B003C4E30 /* CCVideoEncoder.m */; };
+		6017CD5C24E7B72C003C4E30 /* CCVideoDecoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 6017CD5924E7B72B003C4E30 /* CCVideoDecoder.m */; };
+		6017CD6024E7B8B3003C4E30 /* CCAVConfig.m in Sources */ = {isa = PBXBuildFile; fileRef = 6017CD5F24E7B8B3003C4E30 /* CCAVConfig.m */; };
+		6017CD6524E7BD93003C4E30 /* AAPLEAGLLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = 6017CD6324E7BD93003C4E30 /* AAPLEAGLLayer.m */; };
 		6070F86124D5059A0049A0DE /* TakephotoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6070F86024D5059A0049A0DE /* TakephotoViewController.swift */; };
 		6070F86324D506E00049A0DE /* VideoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6070F86224D506E00049A0DE /* VideoViewController.swift */; };
 		6087017224E4E86B00EC07D5 /* DQVideoDecode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6087017124E4E86B00EC07D5 /* DQVideoDecode.swift */; };
@@ -20,6 +24,15 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		6017CD5724E7B72B003C4E30 /* CCVideoDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CCVideoDecoder.h; sourceTree = "<group>"; };
+		6017CD5824E7B72B003C4E30 /* CCVideoEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CCVideoEncoder.m; sourceTree = "<group>"; };
+		6017CD5924E7B72B003C4E30 /* CCVideoDecoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CCVideoDecoder.m; sourceTree = "<group>"; };
+		6017CD5D24E7B75D003C4E30 /* Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Header.h; sourceTree = "<group>"; };
+		6017CD5E24E7B8AC003C4E30 /* CCAVConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CCAVConfig.h; sourceTree = "<group>"; };
+		6017CD5F24E7B8B3003C4E30 /* CCAVConfig.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CCAVConfig.m; sourceTree = "<group>"; };
+		6017CD6124E7B917003C4E30 /* CCVideoEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CCVideoEncoder.h; sourceTree = "<group>"; };
+		6017CD6324E7BD93003C4E30 /* AAPLEAGLLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AAPLEAGLLayer.m; sourceTree = "<group>"; };
+		6017CD6424E7BD93003C4E30 /* AAPLEAGLLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AAPLEAGLLayer.h; sourceTree = "<group>"; };
 		6070F86024D5059A0049A0DE /* TakephotoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakephotoViewController.swift; sourceTree = "<group>"; };
 		6070F86224D506E00049A0DE /* VideoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoViewController.swift; sourceTree = "<group>"; };
 		6087017124E4E86B00EC07D5 /* DQVideoDecode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DQVideoDecode.swift; sourceTree = "<group>"; };
@@ -45,6 +58,28 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6017CD5624E7B72B003C4E30 /* VideoEncoder */ = {
+			isa = PBXGroup;
+			children = (
+				6017CD5724E7B72B003C4E30 /* CCVideoDecoder.h */,
+				6017CD5824E7B72B003C4E30 /* CCVideoEncoder.m */,
+				6017CD5924E7B72B003C4E30 /* CCVideoDecoder.m */,
+				6017CD6124E7B917003C4E30 /* CCVideoEncoder.h */,
+				6017CD5E24E7B8AC003C4E30 /* CCAVConfig.h */,
+				6017CD5F24E7B8B3003C4E30 /* CCAVConfig.m */,
+			);
+			path = VideoEncoder;
+			sourceTree = "<group>";
+		};
+		6017CD6224E7BD93003C4E30 /* VideoPlayer */ = {
+			isa = PBXGroup;
+			children = (
+				6017CD6324E7BD93003C4E30 /* AAPLEAGLLayer.m */,
+				6017CD6424E7BD93003C4E30 /* AAPLEAGLLayer.h */,
+			);
+			path = VideoPlayer;
+			sourceTree = "<group>";
+		};
 		60F2153D24D1133F00ADE28F = {
 			isa = PBXGroup;
 			children = (
@@ -64,6 +99,7 @@
 		60F2154824D1133F00ADE28F /* VideoH264 */ = {
 			isa = PBXGroup;
 			children = (
+				6017CD6224E7BD93003C4E30 /* VideoPlayer */,
 				60F2154924D1133F00ADE28F /* AppDelegate.swift */,
 				60F2154B24D1133F00ADE28F /* SceneDelegate.swift */,
 				60F2154D24D1133F00ADE28F /* ViewController.swift */,
@@ -71,6 +107,8 @@
 				6070F86224D506E00049A0DE /* VideoViewController.swift */,
 				6094EE0A24DB987F0018224C /* DQVideoEncoder.swift */,
 				6087017124E4E86B00EC07D5 /* DQVideoDecode.swift */,
+				6017CD5D24E7B75D003C4E30 /* Header.h */,
+				6017CD5624E7B72B003C4E30 /* VideoEncoder */,
 				60F2154F24D1133F00ADE28F /* Main.storyboard */,
 				60F2155224D1134100ADE28F /* Assets.xcassets */,
 				60F2155424D1134100ADE28F /* LaunchScreen.storyboard */,
@@ -150,12 +188,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6017CD5B24E7B72C003C4E30 /* CCVideoEncoder.m in Sources */,
 				60F2154E24D1133F00ADE28F /* ViewController.swift in Sources */,
+				6017CD6524E7BD93003C4E30 /* AAPLEAGLLayer.m in Sources */,
 				6094EE0B24DB987F0018224C /* DQVideoEncoder.swift in Sources */,
 				6087017224E4E86B00EC07D5 /* DQVideoDecode.swift in Sources */,
+				6017CD5C24E7B72C003C4E30 /* CCVideoDecoder.m in Sources */,
 				60F2154A24D1133F00ADE28F /* AppDelegate.swift in Sources */,
 				6070F86124D5059A0049A0DE /* TakephotoViewController.swift in Sources */,
 				6070F86324D506E00049A0DE /* VideoViewController.swift in Sources */,
+				6017CD6024E7B8B3003C4E30 /* CCAVConfig.m in Sources */,
 				60F2154C24D1133F00ADE28F /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -309,6 +351,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.banjiudian.VideoH264du;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = /Users/dzq/Desktop/Private/VideoEncodeH264/VideoH264/VideoH264/Header.h;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -327,6 +370,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.banjiudian.VideoH264du;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = /Users/dzq/Desktop/Private/VideoEncodeH264/VideoH264/VideoH264/Header.h;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

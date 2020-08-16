@@ -11,6 +11,7 @@ import AVFoundation
 import Photos
 import VideoToolbox
 
+
 class VideoViewController: UIViewController {
     //按钮
     var captureButton:UIButton!
@@ -21,8 +22,10 @@ class VideoViewController: UIViewController {
     var input: AVCaptureDeviceInput?
     lazy var previewLayer  = AVCaptureVideoPreviewLayer(session: self.session)
     lazy var recordOutput = AVCaptureMovieFileOutput()
-    var imageView : UIImageView!
+//    var imageView : UIImageView!
 //    var dataOutPut: AVCaptureMetadataOutput!
+    
+    var captureView : UIView!
     let output = AVCaptureVideoDataOutput()
     var focusBox:UIView!
     var exposureBox : UIView!
@@ -33,7 +36,9 @@ class VideoViewController: UIViewController {
     
     var encoder : DQVideoEncoder!
     var decoder:DQVideoDecode!
-    
+    var ccencode : CCVideoEncoder?
+    var ccDecode : CCVideoDecoder?
+    var player : AAPLEAGLLayer?
     
     var fileHandle : FileHandle?
     
@@ -43,11 +48,17 @@ class VideoViewController: UIViewController {
       
         view.backgroundColor = .white
         
-        previewLayer.frame = view.bounds
+        captureView = UIView(frame: CGRect(x: 5, y: 200, width: view.frame.size.width/2 - 10, height: 300))
+        captureView.backgroundColor = .orange
+        view.addSubview(captureView)
+        previewLayer.frame = captureView.bounds
         //CGRect(x: 0, y: 100, width: view.bounds.size.width, height: view.bounds.size.height - 200)
         previewLayer.isHidden = true
         previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
+        captureView.layer.addSublayer(previewLayer)
+        
+        player = AAPLEAGLLayer(frame: CGRect(x: view.frame.size.width/2 + 5, y: 200, width: view.frame.size.width/2 - 10, height: 300))
+        view.layer.addSublayer(player!)
         
         recodButton = UIButton(frame: CGRect(x: view.bounds.size.width - 160, y: view.bounds.size.height - 60, width: 150, height: 50))
         recodButton.backgroundColor = .gray
@@ -55,11 +66,6 @@ class VideoViewController: UIViewController {
         recodButton.setTitle("start record", for: .normal)
         recodButton.addTarget(self, action: #selector(recordAction(btn:)), for: .touchUpInside)
         view.addSubview(recodButton)
-        
-        imageView = UIImageView(frame: CGRect.init(x: 100, y: 200, width: 200, height: 300))
-        imageView.backgroundColor = .orange
-        view.addSubview(imageView)
-        imageView.isHidden = true
         
         let tap = UITapGestureRecognizer(target: self, action: #selector(tapAction(tap:)))
         view.addGestureRecognizer(tap)
@@ -128,21 +134,39 @@ class VideoViewController: UIViewController {
         previewLayer.videoGravity = .resizeAspect
         session.startRunning()
         
-        
+        //编码
         encoder = DQVideoEncoder(width: 480, height: 640)
-        decoder = DQVideoDecode(width: 480, height: 640)
-        
         encoder.videoEncodeCallback {[weak self] (data) in
 //            self?.writeTofile(data: data)
             self?.decoder.decode(data: data)
+//            self?.ccDecode?.decodeNaluData(data)
         }
         encoder.videoEncodeCallbackSPSAndPPS {[weak self] (sps, pps) in
+            //存入文件
 //            self?.writeTofile(data: sps)
 //            self?.writeTofile(data: pps)
-            
+            //直接解码
             self?.decoder.decode(data: sps)
-            self?.decoder.decode(data: pps)            
+            self?.decoder.decode(data: pps)
+//            self?.ccDecode?.decodeNaluData(sps)
+//            self?.ccDecode?.decodeNaluData(pps)
         }
+        //解码
+        decoder = DQVideoDecode(width: 480, height: 640)
+        decoder.SetVideoDecodeCallback { (image) in
+            self.player?.pixelBuffer = image
+            
+        }
+        
+        //OC版本使用
+        let con = CCVideoConfig()
+        con.width = 480
+        con.height = 640
+        con.bitrate = 480 * 640 * 5
+        ccencode = CCVideoEncoder(config: con)
+        ccencode?.delegate = self
+        ccDecode = CCVideoDecoder(config: con)
+        ccDecode?.delegate = self
     
     }
     
@@ -152,46 +176,40 @@ class VideoViewController: UIViewController {
     }
     @objc func recordAction(btn:UIButton){
         btn.isSelected = !btn.isSelected
-        if session.isRunning {
-            if btn.isSelected {
-                
-                btn.setTitle("stop record", for: .normal)
-                if !session.isRunning{
-                    session.startRunning()
-                }
-                
-                output.setSampleBufferDelegate(self, queue: queue)
-                if session.canAddOutput(output){
-                    session.addOutput(output)
-                }
-                output.alwaysDiscardsLateVideoFrames = false
-                //这里设置格式为BGRA，而不用YUV的颜色空间，避免使用Shader转换
-                //注意:这里必须和后面CVMetalTextureCacheCreateTextureFromImage 保存图像像素存储格式保持一致.否则视频会出现异常现象.
-                output.videoSettings = [String(kCVPixelBufferPixelFormatTypeKey)  :NSNumber(value: kCVPixelFormatType_32BGRA) ]
-                let connection: AVCaptureConnection = output.connection(with: .video)!
-                connection.videoOrientation = .portrait
-                
-                if fileHandle == nil{
-                    //生成的文件地址
-                    guard let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first else { return  }
-                    let filePath =  "\(path)/video.h264"
-                    
-                    try? FileManager.default.removeItem(atPath: filePath)
-                    if FileManager.default.createFile(atPath: filePath, contents: nil, attributes: nil){
-                        print("创建264文件成功")
-                    }else{
-                        print("创建264文件失败")
-                    }
-                    fileHandle = FileHandle(forWritingAtPath: filePath)
-                }
-                
-                
-            }else{
-                session.removeOutput(output)
-                btn.setTitle("start record", for: .normal)
+        if !session.isRunning{
+            session.startRunning()
+        }
+        if btn.isSelected {
+            
+            btn.setTitle("stop record", for: .normal)
+            
+            output.setSampleBufferDelegate(self, queue: queue)
+            if session.canAddOutput(output){
+                session.addOutput(output)
             }
+            output.alwaysDiscardsLateVideoFrames = false
+            //这里设置格式为BGRA，而不用YUV的颜色空间，避免使用Shader转换
+            //注意:这里必须和后面CVMetalTextureCacheCreateTextureFromImage 保存图像像素存储格式保持一致.否则视频会出现异常现象.
+            output.videoSettings = [String(kCVPixelBufferPixelFormatTypeKey)  :NSNumber(value: kCVPixelFormatType_32BGRA) ]
+            let connection: AVCaptureConnection = output.connection(with: .video)!
+            connection.videoOrientation = .portrait
+            
+            if fileHandle == nil{
+                //生成的文件地址
+                guard let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first else { return  }
+                let filePath =  "\(path)/video.h264"
+                try? FileManager.default.removeItem(atPath: filePath)
+                if FileManager.default.createFile(atPath: filePath, contents: nil, attributes: nil){
+                    print("创建264文件成功")
+                }else{
+                    print("创建264文件失败")
+                }
+                fileHandle = FileHandle(forWritingAtPath: filePath)
+            }
+            
         }else{
-            imageView.isHidden = true
+            session.removeOutput(output)
+            btn.setTitle("start record", for: .normal)
         }
         
     }
@@ -391,6 +409,7 @@ extension VideoViewController : AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         
         encoder.encodeVideo(sampleBuffer: sampleBuffer)
+//        ccencode?.encodeVideoSampleBuffer(sampleBuffer)
 
     }
     
@@ -403,5 +422,21 @@ extension VideoViewController : AVCaptureFileOutputRecordingDelegate {
         
     }
         
+}
+//Mark - OC版代理回掉
+extension VideoViewController :CCVideoDecoderDelegate,CCVideoEncoderDelegate{
+    func videoDecodeCallback(_ imageBuffer: CVPixelBuffer!) {
+        player?.pixelBuffer = imageBuffer
+    }
+    
+    func videoEncodeCallback(_ h264Data: Data!) {
+        self.decoder.decode(data: h264Data)
+    }
+    
+    func videoEncodeCallbacksps(_ sps: Data!, pps: Data!) {
+        self.decoder.decode(data: sps)
+        self.decoder.decode(data: pps)
+    }
+
 }
 

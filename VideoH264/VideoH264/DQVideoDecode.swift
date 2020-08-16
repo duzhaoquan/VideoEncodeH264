@@ -25,8 +25,8 @@ class DQVideoDecode: NSObject {
     var decompressionSession : VTDecompressionSession?
     var callback :VTDecompressionOutputCallback?
     
-    var videoDecodeCallback:((CVImageBuffer) -> Void)?
-    func SetVideoDecodeCallback(block:((CVImageBuffer) -> Void)?)  {
+    var videoDecodeCallback:((CVImageBuffer?) -> Void)?
+    func SetVideoDecodeCallback(block:((CVImageBuffer?) -> Void)?)  {
         videoDecodeCallback = block
     }
     
@@ -39,13 +39,17 @@ class DQVideoDecode: NSObject {
     
     func initDecoder() -> Bool {
         
-        if decodeDesc != nil {
+        if decompressionSession != nil {
             return true
         }
         guard spsData != nil,ppsData != nil else {
             return false
         }
-        
+//        var frameData = Data(capacity: Int(size))
+//        frameData.append(length, count: 4)
+//        let point :UnsafePointer<UInt8> = [UInt8](data).withUnsafeBufferPointer({$0}).baseAddress!
+//        frameData.append(point + UnsafePointer<UInt8>.Stride(4), count: Int(naluSize))
+        //处理sps/pps
         var sps : [UInt8] = []
         [UInt8](spsData!).suffix(from: 4).forEach { (value) in
             sps.append(value)
@@ -54,9 +58,8 @@ class DQVideoDecode: NSObject {
         [UInt8](ppsData!).suffix(from: 4).forEach{(value) in
             pps.append(value)
         }
-        let spsAndpps = [sps.withUnsafeBufferPointer{$0}.baseAddress!,pps.withUnsafeBufferPointer{$0}.baseAddress!]
         
-//        guard let pionter = spsAndpps.withUnsafeBufferPointer({$0}).baseAddress else{return false}
+        let spsAndpps = [sps.withUnsafeBufferPointer{$0}.baseAddress!,pps.withUnsafeBufferPointer{$0}.baseAddress!]
         let sizes = [sps.count,pps.count]
 
         /**
@@ -69,7 +72,7 @@ class DQVideoDecode: NSObject {
         param _decodeDesc 解码器描述
         return 状态
         */
-        let descriptionState = CMVideoFormatDescriptionCreateFromH264ParameterSets(allocator: nil, parameterSetCount: 2, parameterSetPointers: spsAndpps, parameterSetSizes: sizes, nalUnitHeaderLength: 4, formatDescriptionOut: &decodeDesc)
+        let descriptionState = CMVideoFormatDescriptionCreateFromH264ParameterSets(allocator: kCFAllocatorDefault, parameterSetCount: 2, parameterSetPointers: spsAndpps, parameterSetSizes: sizes, nalUnitHeaderLength: 4, formatDescriptionOut: &decodeDesc)
         if descriptionState != 0 {
             print("description创建失败" )
             return false
@@ -104,7 +107,7 @@ class DQVideoDecode: NSObject {
             kCVPixelBufferPixelFormatTypeKey:kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
             kCVPixelBufferWidthKey:width,
             kCVPixelBufferHeightKey:height,
-            kCVPixelBufferOpenGLCompatibilityKey:true
+//            kCVPixelBufferOpenGLCompatibilityKey:true
             ] as [CFString : Any]
         
         //创建session
@@ -137,52 +140,192 @@ class DQVideoDecode: NSObject {
             guard imageBuffer != nil else {
                 return
             }
+//            sourceFrameRefCon = imageBuffer
             if let block = decoder.videoDecodeCallback  {
-                block(imageBuffer!)
+                decoder.callBackQueue.async {
+                    block(imageBuffer)
+                }
+                
             }
         }
     }
     func decode(data:Data) {
         decodeQueue.async {
-            var length:UInt32 =  UInt32(data.count)
-            self.decodeByte(data: data, size: &length)
+            let length:UInt32 =  UInt32(data.count)
+            self.decodeByte(data: data, size: length)
         }
     }
-    private func decodeByte(data:Data,size:UnsafePointer<UInt32>) {
+    private func decodeByte(data:Data,size:UInt32) {
         //数据类型:frame的前4个字节是NALU数据的开始码，也就是00 00 00 01，
         // 将NALU的开始码转为4字节大端NALU的长度信息
-        var bytes = [UInt8](data)
-        let naluSize :UnsafePointer<UInt32> = size - 4
-        
-        bytes[0] = UInt8(naluSize[3])
-        bytes[1] = UInt8(naluSize[2])
-        bytes[2] = UInt8(naluSize[1])
-        bytes[3] = UInt8(naluSize[0])
-        
+        let naluSize = size - 4
+        let length : [UInt8] = [
+            UInt8(truncatingIfNeeded: naluSize >> 24),
+            UInt8(truncatingIfNeeded: naluSize >> 16),
+            UInt8(truncatingIfNeeded: naluSize >> 8),
+            UInt8(truncatingIfNeeded: naluSize)
+            ]
+        var frameByte :[UInt8] = length
+        [UInt8](data).suffix(from: 4).forEach { (bb) in
+            frameByte.append(bb)
+        }
+        let bytes = frameByte //[UInt8](frameData)
         // 第5个字节是表示数据类型，转为10进制后，7是sps, 8是pps, 5是IDR（I帧）信息
         let type :Int  = Int(bytes[4] & 0x1f)
         switch type{
         case 0x05:
             if initDecoder() {
-                decode(frame: bytes, size: size.pointee)
+                decode(frame: bytes, size: size)
             }
             
         case 0x06:
-            print("")
+//            print("增强信息")
+            break
         case 0x07:
             spsData = data
         case 0x08:
             ppsData = data
         default:
             if initDecoder() {
-                decode(frame: bytes, size: size.pointee)
+                decode(frame: bytes, size: size)
             }
         }
     }
     
     private func decode(frame:[UInt8],size:UInt32) {
-        
-        
+        //
+        var blockBUffer :CMBlockBuffer?
+        var frame1 = frame
+//        var memoryBlock = frame1.withUnsafeMutableBytes({$0}).baseAddress
+//        var ddd = Data(bytes: frame, count: Int(size))
+        //创建blockBuffer
+        /*!
+         参数1: structureAllocator kCFAllocatorDefault
+         参数2: memoryBlock  frame
+         参数3: frame size
+         参数4: blockAllocator: Pass NULL
+         参数5: customBlockSource Pass NULL
+         参数6: offsetToData  数据偏移
+         参数7: dataLength 数据长度
+         参数8: flags 功能和控制标志
+         参数9: newBBufOut blockBuffer地址,不能为空
+         */
+        let blockState = CMBlockBufferCreateWithMemoryBlock(allocator: kCFAllocatorDefault,
+                                           memoryBlock: &frame1,
+                                           blockLength: Int(size),
+                                           blockAllocator: kCFAllocatorNull,
+                                           customBlockSource: nil,
+                                           offsetToData:0,
+                                           dataLength: Int(size),
+                                           flags: 0,
+                                           blockBufferOut: &blockBUffer)
+        if blockState != 0 {
+            print("创建blockBuffer失败")
+        }
+//
+        var sampleSizeArray :[Int] = [Int(size)]
+        var sampleBuffer :CMSampleBuffer?
+        //创建sampleBuffer
+        /*
+         参数1: allocator 分配器,使用默认内存分配, kCFAllocatorDefault
+         参数2: blockBuffer.需要编码的数据blockBuffer.不能为NULL
+         参数3: formatDescription,视频输出格式
+         参数4: numSamples.CMSampleBuffer 个数.
+         参数5: numSampleTimingEntries 必须为0,1,numSamples
+         参数6: sampleTimingArray.  数组.为空
+         参数7: numSampleSizeEntries 默认为1
+         参数8: sampleSizeArray
+         参数9: sampleBuffer对象
+         */
+        let readyState = CMSampleBufferCreateReady(allocator: kCFAllocatorDefault,
+                                  dataBuffer: blockBUffer,
+                                  formatDescription: decodeDesc,
+                                  sampleCount: CMItemCount(1),
+                                  sampleTimingEntryCount: CMItemCount(),
+                                  sampleTimingArray: nil,
+                                  sampleSizeEntryCount: CMItemCount(1),
+                                  sampleSizeArray: &sampleSizeArray,
+                                  sampleBufferOut: &sampleBuffer)
+        if readyState != 0 {
+            print("Sample Buffer Create Ready faile")
+        }
+        //解码数据
+        /*
+         参数1: 解码session
+         参数2: 源数据 包含一个或多个视频帧的CMsampleBuffer
+         参数3: 解码标志
+         参数4: 解码后数据outputPixelBuffer
+         参数5: 同步/异步解码标识
+         */
+        let sourceFrame:UnsafeMutableRawPointer? = nil
+        var inforFalg = VTDecodeInfoFlags.asynchronous
+        let decodeState = VTDecompressionSessionDecodeFrame(self.decompressionSession!, sampleBuffer: sampleBuffer!, flags:VTDecodeFrameFlags._EnableAsynchronousDecompression , frameRefcon: sourceFrame, infoFlagsOut: &inforFalg)
+        if decodeState != 0 {
+            print("解码失败")
+        }
+    }
+    
+    deinit {
+        if decompressionSession != nil {
+            VTDecompressionSessionInvalidate(decompressionSession!)
+            decompressionSession = nil
+        }
         
     }
+}
+extension Int {
+    // MARK:- 转成 2位byte
+    func lyz_to2Bytes() -> [UInt8] {
+        let UInt = UInt16.init(Double.init(self))
+        return [UInt8(truncatingIfNeeded: UInt >> 8),UInt8(truncatingIfNeeded: UInt)]
+    }
+    // MARK:- 转成 4字节的bytes
+    func lyz_to4Bytes() -> [UInt8] {
+        let UInt = UInt32.init(Double.init(self))
+        return [UInt8(truncatingIfNeeded: UInt >> 24),
+                UInt8(truncatingIfNeeded: UInt >> 16),
+                UInt8(truncatingIfNeeded: UInt >> 8),
+                UInt8(truncatingIfNeeded: UInt)]
+    }
+    // MARK:- 转成 8位 bytes
+    func lyz_toEightBytes() -> [UInt8] {
+        let UInt = UInt64.init(Double.init(self))
+        return [UInt8(truncatingIfNeeded: UInt >> 56),
+                UInt8(truncatingIfNeeded: UInt >> 48),
+                UInt8(truncatingIfNeeded: UInt >> 40),
+                UInt8(truncatingIfNeeded: UInt >> 32),
+                UInt8(truncatingIfNeeded: UInt >> 24),
+                UInt8(truncatingIfNeeded: UInt >> 16),
+                UInt8(truncatingIfNeeded: UInt >> 8),
+                UInt8(truncatingIfNeeded: UInt)]
+    }
+}
+extension Data {
+    //1bytes转Int
+    func lyz_1BytesToInt() -> Int {
+        var value : UInt8 = 0
+        let data = NSData(bytes: [UInt8](self), length: self.count)
+        data.getBytes(&value, length: self.count)
+        value = UInt8(bigEndian: value)
+        return Int(value)
+    }
+    
+    //2bytes转Int
+    func lyz_2BytesToInt() -> Int {
+        var value : UInt16 = 0
+        let data = NSData(bytes: [UInt8](self), length: self.count)
+        data.getBytes(&value, length: self.count)
+        value = UInt16(bigEndian: value)
+        return Int(value)
+    }
+    
+    //4bytes转Int
+    func lyz_4BytesToInt() -> Int {
+        var value : UInt32 = 0
+        let data = NSData(bytes: [UInt8](self), length: self.count)
+        data.getBytes(&value, length: self.count)
+        value = UInt32(bigEndian: value)
+        return Int(value)
+    }
+    
 }
