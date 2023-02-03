@@ -149,8 +149,9 @@ class TakephotoViewController: UIViewController {
             session.addInput(input)
         }
         previewLayer.isHidden = false
-        session.startRunning()
-        
+        DispatchQueue.global().async {
+            self.session.startRunning()
+        }
     }
     //MARK: -闪光灯
     func setFlash(mode : AVCaptureDevice.FlashMode){
@@ -159,15 +160,18 @@ class TakephotoViewController: UIViewController {
             return
         }
         //        When using AVCapturePhotoOutput, AVCaptureDevice's flashMode property is ignored. You specify flashMode on a per photo basis by setting the AVCapturePhotoSettings.flashMode property.
-        if device.isFlashModeSupported(mode){
-            do {
-                try device.lockForConfiguration()
-                device.flashMode = mode
-                device.unlockForConfiguration()
-            } catch let error {
-                print(error.localizedDescription)
-            }
-        }
+        imageOutPut.photoSettingsForSceneMonitoring?.flashMode = mode
+//        if device.isFlashModeSupported(mode){
+//            do {
+//                try device.lockForConfiguration()
+//                imageOutPut.photoSettingsForSceneMonitoring?.flashMode = mode
+//                device.unlockForConfiguration()
+//            } catch let error {
+//                print(error.localizedDescription)
+//            }
+//        }
+        
+        
         
     }
     //MARK: - 手电筒

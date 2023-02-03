@@ -344,14 +344,19 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 6245M2ZZ7W;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+					"GLES_SILENCE_DEPRECATION=1",
+				);
 				INFOPLIST_FILE = VideoH264/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.banjiudian.VideoH264du;
+				PRODUCT_BUNDLE_IDENTIFIER = com.banjiudian.VideoH264;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = /Users/dzq/Desktop/Private/VideoEncodeH264/VideoH264/VideoH264/Header.h;
+				SWIFT_OBJC_BRIDGING_HEADER = "${SRCROOT}/VideoH264/Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -363,14 +368,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 6245M2ZZ7W;
+				GCC_PREPROCESSOR_DEFINITIONS = "GLES_SILENCE_DEPRECATION=1";
 				INFOPLIST_FILE = VideoH264/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.banjiudian.VideoH264du;
+				PRODUCT_BUNDLE_IDENTIFIER = com.banjiudian.VideoH264;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = /Users/dzq/Desktop/Private/VideoEncodeH264/VideoH264/VideoH264/Header.h;
+				SWIFT_OBJC_BRIDGING_HEADER = "${SRCROOT}/VideoH264/Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

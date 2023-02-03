@@ -124,7 +124,7 @@ class DQVideoEncoder: NSObject {
             let attachArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer!, createIfNecessary: false)
             
             
-            var strkey = unsafeBitCast(kCMSampleAttachmentKey_NotSync, to: UnsafeRawPointer.self)
+            let strkey = unsafeBitCast(kCMSampleAttachmentKey_NotSync, to: UnsafeRawPointer.self)
             let cfDic = unsafeBitCast(CFArrayGetValueAtIndex(attachArray, 0), to: CFDictionary.self)
             let keyFrame = !CFDictionaryContainsKey(cfDic, strkey);//没有这个键就意味着同步,就是关键帧
             

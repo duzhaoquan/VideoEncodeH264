@@ -132,7 +132,10 @@ class VideoViewController: UIViewController {
         previewLayer.isHidden = false
         //视图重力
         previewLayer.videoGravity = .resizeAspect
-        session.startRunning()
+        DispatchQueue.global().async {
+            self.session.startRunning()
+        }
+        
         
         //编码
         encoder = DQVideoEncoder(width: 480, height: 640)
@@ -171,7 +174,7 @@ class VideoViewController: UIViewController {
     }
     
     func writeTofile(data: Data){
-        try? self.fileHandle?.seekToEnd()
+        _ = try? self.fileHandle?.seekToEnd()
         self.fileHandle?.write(data)
     }
     @objc func recordAction(btn:UIButton){
@@ -299,20 +302,28 @@ class VideoViewController: UIViewController {
     }
  
     //MARK: -闪光灯
-    func setFlash(mode : AVCaptureDevice.FlashMode){
+    var flash = false
+    func setFlash(){
         //设备是否支持闪光灯
-        guard let device = self.input?.device,device.hasFlash else {
+        guard let device = self.input?.device,device.isTorchAvailable else {
             return
         }
         //        When using AVCapturePhotoOutput, AVCaptureDevice's flashMode property is ignored. You specify flashMode on a per photo basis by setting the AVCapturePhotoSettings.flashMode property.
-        if device.isFlashModeSupported(mode){
-            do {
-                try device.lockForConfiguration()
-                device.flashMode = mode
-                device.unlockForConfiguration()
-            } catch let error {
-                print(error.localizedDescription)
+        
+        
+        do {
+            try device.lockForConfiguration()
+            if flash {
+                device.torchMode = .off
+                flash = false
+            }else{
+                device.torchMode = .on
+                flash = true
             }
+            
+            device.unlockForConfiguration()
+        } catch let error {
+            print(error.localizedDescription)
         }
         
     }
